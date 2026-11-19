@@ -40,6 +40,11 @@ class EchoPoint(BaseModel):
     strength_db:float=Field(ge=-120,le=0)
 class EchoInput(BaseModel):
     points:list[EchoPoint]=Field(min_length=1,max_length=1000)
+    batch_no:int|None=Field(default=None,ge=1)
+    gain_db:float|None=Field(default=None,ge=10,le=80)
+class GainCorrectionInput(BaseModel):
+    gain_db:float=Field(ge=10,le=80)
+    note:str=Field(default='',max_length=200)
 class AnalysisInput(BaseModel):
     transect_id:int
     eps:float=Field(ge=.3,le=3)

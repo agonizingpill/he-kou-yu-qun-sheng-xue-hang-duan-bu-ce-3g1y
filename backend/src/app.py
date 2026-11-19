@@ -10,6 +10,9 @@ logging.basicConfig(level=logging.INFO)
 @asynccontextmanager
 async def lifespan(app):
     Base.metadata.create_all(engine)
+    from .database import Session
+    from .transect_service import backfill_batches
+    with Session() as db:backfill_batches(db)
     if os.getenv('SEED_DEMO','true')=='true':
         try:
             from .seed import seed

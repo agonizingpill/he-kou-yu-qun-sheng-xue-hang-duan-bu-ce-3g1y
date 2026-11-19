@@ -9,6 +9,9 @@ def latest(db,transect_id,reviewed=False):
     row=db.scalar(select(SchoolAnalysis).where(SchoolAnalysis.transect_id==transect_id,SchoolAnalysis.data_version==t.data_version).order_by(SchoolAnalysis.id.desc()))
     if row is None or row.status not in (('reviewed',) if reviewed else ('done','reviewed')):return None
     return row
+def complete(row):
+    # 点位归类和指标齐备才算完成，半成品永远不能进入复核或一次性切换。
+    return bool(row.assignments) and bool(row.metrics) and row.metrics.get('point_count')==len(row.assignments)
 def enqueue(db,data,user):
     c,t=transect_lock(db,data.transect_id)
     reject(db.scalar(select(func.count()).select_from(Echo).where(Echo.transect_id==t.id))<8,'至少8个回波点才可识别群落')
@@ -20,6 +23,8 @@ def enqueue(db,data,user):
     return result
 def review(db,id,data,user):
     initial=get(db,SchoolAnalysis,id);c,t=transect_lock(db,initial.transect_id);row=get(db,SchoolAnalysis,id,True)
-    reject(row.status!='done' or row.data_version!=t.data_version,'仅最新回波版本的已完成识别可复核')
+    reject(row.status!='done' or row.data_version!=t.data_version,'仅最新回波版本的已完成识别可复核；旧版本结果已过期')
+    # 旧识别即使晚算完，版本不匹配也会被上一条挡下；此处再确认点位归类与指标齐备后一次性切换。
+    reject(not complete(row),'识别点位归类或指标未齐备，不能送复核')
     reject(row.metrics.get('noise_count',0)>0 and len(data.noise_note.strip())<8,'存在噪点，请补充至少8字现场解释')
     row.status='reviewed';t.status='reviewed';review=SchoolReview(analysis_id=row.id,**data.model_dump());db.add(review);db.flush();return finish(db,user,'群落与噪点复核',review)

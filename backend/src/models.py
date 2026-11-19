@@ -53,11 +53,22 @@ class Transect(Base):
     gain_db:Mapped[float]=mapped_column(Float)
     data_version:Mapped[int]=mapped_column(Integer,default=0)
     status:Mapped[str]=mapped_column(String(20),default='planned')
+class EchoBatch(Base):
+    __tablename__='echo_batches'
+    __table_args__=(UniqueConstraint('transect_id','batch_no'),CheckConstraint('batch_no >= 1'),CheckConstraint('recorded_gain_db > 0'))
+    id:Mapped[int]=mapped_column(primary_key=True)
+    transect_id:Mapped[int]=mapped_column(ForeignKey('transects.id'))
+    batch_no:Mapped[int]=mapped_column(Integer)
+    recorded_gain_db:Mapped[float]=mapped_column(Float)
+    corrected_gain_db:Mapped[float|None]=mapped_column(Float,nullable=True)
+    source:Mapped[str]=mapped_column(String(50),default='manual')
+    note:Mapped[str]=mapped_column(String(200),default='')
 class Echo(Base):
     __tablename__='echoes'
     __table_args__=(CheckConstraint('depth_m > 0'),CheckConstraint('along_m >= 0'))
     id:Mapped[int]=mapped_column(primary_key=True)
     transect_id:Mapped[int]=mapped_column(ForeignKey('transects.id'))
+    batch_id:Mapped[int|None]=mapped_column(ForeignKey('echo_batches.id'),nullable=True)
     along_m:Mapped[float]=mapped_column(Float)
     lon:Mapped[float]=mapped_column(Float)
     lat:Mapped[float]=mapped_column(Float)

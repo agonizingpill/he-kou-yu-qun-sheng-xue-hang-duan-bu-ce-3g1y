@@ -7,11 +7,11 @@
 ## 六个模块
 
 1. 航次与禁航：具名调查船、带时区航窗、潮汐禁航。开航重新检查冲突；同船同期只能一航次；未开航可改时间恢复。
-2. 声学航段与探头：地理端点、米制长度、38/120/200kHz探头、增益；回波点含沿程距离、经纬度、水深和强度，范围与偏航100米约束。
+2. 声学航段与探头：地理端点、米制长度、38/120/200kHz探头、增益；回波按批采集（EchoBatch），每批登记当时探头增益，回波点含沿程距离、经纬度、水深和原始强度读数，范围与偏航100米约束。某批增益记错可在声学航段页按批更正，原始增益与原始强度读数保留不覆盖；早期未分批的回波在启动时幂等回填为一批。更正落账即回波新版本，旧识别全部过期，全段重算只按增益差调整该批回波的输入，重复更正不叠加差值。
 3. 群落与噪点：worker实际DBSCAN，复核针对当前回波版本与最新识别ID；有噪点必须解释。同版本重跑识别后，旧复核不会继续放行。
 4. 网具与生物样：标称网目、实测尺度、证书和有效期；误差≤10%合格，最新校验须覆盖上海时区完整返航日期。样本引用已复核分析和实际校验记录，不可关联噪点。
 5. 缺测补航：原航段沿程区间不得重叠，主管按区间自动推导补航地理端点；补航回波、噪点复核和生物样齐全后才能接续。空补航可撤销重排。
-6. 图层封存：缺测全部覆盖后结束现场；逐航段最新分析、噪点复核和对应样本齐全后冻结。JSON快照包含回波、聚类、复核、样本、网具与校验，附原始canonical_json及其UTF-8字节SHA256；航次冻结后拒绝业务变更。
+6. 图层封存：缺测全部覆盖后结束现场；逐航段最新分析、噪点复核和对应样本齐全后冻结。JSON快照包含回波批次与增益更正记录、回波原读数、聚类、复核、样本、网具与校验，附原始canonical_json及其UTF-8字节SHA256；航次冻结后拒绝业务变更。
 
 ## 启动和账户
 
@@ -59,7 +59,7 @@ worker从Redis队列领取任务，保存assignments、metrics、失败原因，
 |---|---|
 | backend/src/models.py、schemas.py | Cruise/NavigationClosure、Transect/Echo、SchoolAnalysis/Review、Net/Calibration/BioSample、MissingInterval/Resurvey、SurveyRelease关系模型与输入契约 |
 | navigation_service.py | 航窗、潮汐冲突、同船占用与开返航 |
-| transect_service.py、school_service.py、algorithm.py、worker.py | 航段长度、探头范围、版本化回波、实际聚类和噪点复核 |
+| transect_service.py、school_service.py、algorithm.py、worker.py | 航段长度、探头范围、版本化分批回波、按批增益更正（保留原读数）、实际聚类和噪点复核 |
 | biology_service.py、resurvey_service.py、release_service.py | 网具、生物样、补测地理接续与JSON冻结 |
 | common.py、auth.py、middlewares.py | 根锁、三角色JWT、动作审计、请求追踪和突发限流 |
 | frontend/src/pages | 六个原生ES modules业务页 |

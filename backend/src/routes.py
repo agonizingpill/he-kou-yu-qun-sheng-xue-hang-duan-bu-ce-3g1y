@@ -15,7 +15,7 @@ def login(data:Login,db=Depends(session)):
     return {'token':issue(row),'username':row.username,'role':row.role}
 @router.get('/workspace')
 def workspace(db=Depends(session),user=Depends(current)):
-    return {m.__tablename__:[dump(r) for r in db.scalars(select(m).order_by(m.id))] for m in [Boat,Cruise,NavigationClosure,Transect,Echo,SchoolAnalysis,SchoolReview,Net,NetCalibration,BioSample,MissingInterval,Resurvey,SurveyRelease]}
+    return {m.__tablename__:[dump(r) for r in db.scalars(select(m).order_by(m.id))] for m in [Boat,Cruise,NavigationClosure,Transect,EchoBatch,Echo,SchoolAnalysis,SchoolReview,Net,NetCalibration,BioSample,MissingInterval,Resurvey,SurveyRelease]}
 @router.post('/cruises')
 def create(data:CruiseInput,db=Depends(session),user=Depends(editor)):return nav.create(db,data,user)
 @router.patch('/cruises/{id}/schedule')
@@ -29,9 +29,11 @@ def returned(id:int,db=Depends(session),user=Depends(supervisor)):return nav.ret
 @router.post('/transects')
 def create_transect(data:TransectInput,db=Depends(session),user=Depends(editor)):return transect.create(db,data,user)
 @router.post('/transects/{id}/echoes')
-def echoes(id:int,data:EchoInput,db=Depends(session),user=Depends(editor)):return transect.record(db,id,[p.model_dump() for p in data.points],user)
+def echoes(id:int,data:EchoInput,db=Depends(session),user=Depends(editor)):return transect.record(db,id,[p.model_dump() for p in data.points],user,batch_no=data.batch_no,gain_db=data.gain_db)
 @router.post('/transects/{id}/simulate')
 def simulate(id:int,db=Depends(session),user=Depends(editor)):return transect.simulate(db,id,user)
+@router.patch('/transects/{id}/batches/{batch_no}/gain')
+def correct_gain(id:int,batch_no:int,data:GainCorrectionInput,db=Depends(session),user=Depends(editor)):return transect.correct_gain(db,id,batch_no,data,user)
 @router.post('/schools')
 def analyze(data:AnalysisInput,db=Depends(session),user=Depends(editor)):return school.enqueue(db,data,user)
 @router.post('/schools/{id}/review')
